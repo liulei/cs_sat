@@ -245,477 +245,51 @@ void purify_measurement_init_cft(purify_sparsemat_row *mat,
                                  double *deconv, double *u, double *v, 
                                  purify_measurement_cparam *param) {
 
-  int i, j, k, l;
-  int nx2, ny2;
-  double u1;
-  double v1;
-  int g1, g2, h1, h2;
-  int  g11, h11;
-  double temp1, temp2, sigmax, sigmay;
-  int row, st, numel;
+    int i, j, k, l;
+    int nx2, ny2;
+    int row, numel;
   
-  double *u2;
-  double *v2;
-  double *u3;
-  double *v3;
-
-  double *kernel;
-  int *ptr;
-  
-  //Sparse matrix initialization
-  nx2 = param->ofx*param->nx1;
-  ny2 = param->ofy*param->ny1;
-
-  mat->nrows = param->nmeas;
-  mat->ncols = nx2*ny2;
-  mat->nvals = param->kx*param->ky*param->nmeas;
-  mat->real = 1;
-  mat->cvals = NULL;
-  numel = param->kx*param->ky;
  
-  
-  mat->vals = (double*)malloc(mat->nvals * sizeof(double));
-  PURIFY_ERROR_MEM_ALLOC_CHECK(mat->vals);
-  mat->colind = (int*)malloc(mat->nvals * sizeof(int));
-  PURIFY_ERROR_MEM_ALLOC_CHECK(mat->colind);
-  mat->rowptr = (int*)malloc((mat->nrows + 1) * sizeof(int));
-  PURIFY_ERROR_MEM_ALLOC_CHECK(mat->rowptr);
+    //Sparse matrix initialization
+    nx2 = param->ofx*param->nx1;
+    ny2 = param->ofy*param->ny1;
 
+    mat->nrows = param->nmeas;
+    mat->ncols = nx2*ny2;
+    mat->nvals = param->kx*param->ky*param->nmeas;
+    mat->real = 1;
+    mat->cvals = NULL;
+    numel = param->kx*param->ky;
+ 
+    mat->vals = (double*)malloc(mat->nvals * sizeof(double));
+    PURIFY_ERROR_MEM_ALLOC_CHECK(mat->vals);
+    mat->colind = (int*)malloc(mat->nvals * sizeof(int));
+    PURIFY_ERROR_MEM_ALLOC_CHECK(mat->colind);
+    mat->rowptr = (int*)malloc((mat->nrows + 1) * sizeof(int));
+    PURIFY_ERROR_MEM_ALLOC_CHECK(mat->rowptr);
 
-  //Discrete frequency grids
-  u2 = (double*)malloc(nx2 * sizeof(double));
-  PURIFY_ERROR_MEM_ALLOC_CHECK(u2);
-  v2 = (double*)malloc(ny2 * sizeof(double));
-  PURIFY_ERROR_MEM_ALLOC_CHECK(v2);
-  u3 = (double*)malloc((nx2 + param->kx) * sizeof(double));
-  PURIFY_ERROR_MEM_ALLOC_CHECK(u3);
-  v3 = (double*)malloc((ny2 + param->ky) * sizeof(double));
-  PURIFY_ERROR_MEM_ALLOC_CHECK(v3);
-
-  
-  temp1 = 2*PURIFY_PI/(double)nx2;
-  u2[0] = 0.0;
-  for (i=1; i < nx2; i++){
-    u2[i] = u2[i-1] + temp1;
-  }
-  u3[0] = -((double)param->kx/2.0)*temp1;
-  for (i=1; i < (nx2 + param->kx); i++){
-    u3[i] = u3[i-1] + temp1;
-  }
-
-  temp1 = 2*PURIFY_PI/(double)ny2;
-  v2[0] = 0.0;
-  for (i=1; i < ny2; i++){
-    v2[i] = v2[i-1] + temp1;
-  }
-  v3[0] = -((double)param->ky/2.0)*temp1;
-  for (i=1; i < (ny2 + param->ky); i++){
-    v3[i] = v3[i-1] + temp1;
-  }
-
-
-  //Allocate memory for the kernel
-  kernel = (double*)malloc((numel) * sizeof(double));
-  PURIFY_ERROR_MEM_ALLOC_CHECK(kernel);
-
-  ptr = (int*)malloc((numel) * sizeof(int));
-  PURIFY_ERROR_MEM_ALLOC_CHECK(ptr);
-
-
-  //Scale parameters for the Gaussian interpolation kernel
-  sigmax = 1.0/(double)param->nx1;
-  sigmay = 1.0/(double)param->ny1;
-
+// Row pointer vector
+    for (j = 0; j < mat->nrows + 1; j++){
+        mat->rowptr[j] = j*numel;
+    }
 
   //Main loop
-  for (i=0; i < param->nmeas; i++){
+    for (i=0; i < param->nmeas; i++){
     
     //Row pointer
-    row = i*numel;
-    
-    //Shift by 2Pi for negative frecquencies (fftshift)
-    if (u[i] < 0.0){
-      u1 = u[i] + 2*PURIFY_PI;
+        row = i*numel;
+
+        idu = floor(u[i] / uinc + 0.5);
+        if(idu < 0) idu += nx2;
+        if(idu >= nx2) idu -= nx2;
+
+        idv = floor(v[i] / vinc + 0.5);
+        if(idv < 0) idv += ny2;
+        if(idv >= ny2) idv -= ny2;
+
+        mat->vals[row] = 1.0;
+        mat->colind[row] = idv * nx2 + idu;
     }
-    else{
-      u1 = u[i];
-    }
-
-    if (v[i] < 0.0){
-      v1 = v[i] + 2*PURIFY_PI;
-    }
-    else{
-      v1 = v[i];
-    }
-    
-    //Find closest point in the discrete grid
-    g1 = purify_utils_absearch(u2, nx2, u1);
-    h1 = purify_utils_absearch(v2, ny2, v1);
-
-    
-    //Pointers in u2 and v2
-    g2 = g1 + (param->kx/2);
-    g1 = g1 - (param->kx/2) + 1;
-    h2 = h1 + (param->ky/2);
-    h1 = h1 - (param->ky/2) + 1;
-
- 
-    //Pointers in u3 and v3
-    g11 = g1 + (param->kx/2);
-    h11 = h1 + (param->ky/2);
-
-    
-    //Interpolation kernel evaluated on the discrete grid
-    for (k=0; k < param->kx; k++){
-      temp1 = (u3[g11 + k] - u1)/sigmax;
-      temp1 = temp1*temp1;
-      st = k*param->ky;
-      for (j=0; j < param->ky; j++){
-        temp2 = (v3[h11 + j] - v1)/sigmay;
-        temp2 = temp2*temp2;
-        temp2 = -(temp1 + temp2)/2.0;
-        kernel[j + st] = exp(temp2);
-        if( j == param->ky / 2 - 1 && k == param->kx / 2 - 1){
-            kernel[j + st] = 1.0;
-        }else{
-            kernel[j + st] = 0.0;
-        }
-      }
-    }
-  
-    //Foldings for the circular shifts
-    if ((g1 < 0)&&(h1 < 0)){
-      //Case 1
-
-      h11 = ny2+h1;
-      j = param->ky - ny2;
-      // 1 and 2
-      for (l = 0; l <= g2; l++){
-        st = l*param->ky;
-        g11 = (l-g1)*param->ky;
-        for (k = 0; k <= h2; k++){
-          ptr[k + st] = k + l*ny2;
-          mat->vals[k + st + row] = kernel[k - h1 + g11];
-        }
-        for (k = h11; k <= ny2-1; k++){
-          ptr[k + j + st] = k + l*ny2;
-          mat->vals[k + j + st + row] = kernel[k - h11 + g11];
-        }
-      }
-      
-      // 3 and 4
-      for (l = nx2+g1; l <= nx2-1; l++){
-        st = (l+param->kx-nx2)*param->ky;
-        g11 = (l-nx2-g1)*param->ky;
-        for (k = h11; k <= ny2-1; k++){
-          ptr[k + j + st] = k + l*ny2;
-          mat->vals[k + j + st + row] = kernel[k - h11 + g11];
-        }
-        for (k = 0; k <= h2; k++){
-          ptr[k + st] = k + l*ny2;
-          mat->vals[k + st + row] = kernel[k - h1 + g11];
-        }
-      }
-
-      //Column pointer vector
-      for (j = 0; j < numel; j++){
-        mat->colind[j + row] = ptr[j];
-      }
-
-    }  
-    else if ((g1 < 0)&&(h1 >= 0)&&(h2 < ny2)){
-      //Case 2
-
-      //2
-      for (l = 0; l <= g2; l++){
-        st = l*param->ky;
-        g11 = (l-g1)*param->ky;
-        for (k = h1; k <= h2; k++){
-          ptr[k - h1 + st] = k + l*ny2;
-          mat->vals[k - h1 + st + row] = kernel[k - h1 + g11];
-        }
-      }
-      
-      //1
-      for (l = nx2+g1; l <= nx2-1; l++){
-        st = (l+param->kx-nx2)*param->ky;
-        g11 = (l-nx2-g1)*param->ky;
-        for (k = h1; k <= h2; k++){
-          ptr[k - h1 + st] = k + l*ny2;
-          mat->vals[k - h1 + st + row] = kernel[k - h1 + g11];
-        }
-      }
-
-      //Column pointer vector
-      for (j = 0; j < numel; j++){
-        mat->colind[j + row] = ptr[j];
-      }
-
-    } 
-    else if ((g1 < 0)&&(h2 >= ny2)){
-      //Case 3
-
-      h11 = ny2-h1;
-      j = param->ky - ny2;
-      // 1 and 2
-      for (l = 0; l <= g2; l++){
-        st = l*param->ky;
-        g11 = (l-g1)*param->ky;
-        for (k = 0; k <= h2-ny2; k++){
-          ptr[k + st] = k + l*ny2;
-          mat->vals[k + st + row] = kernel[k + h11 + g11];
-        }
-        for (k = h1; k <= ny2-1; k++){
-          ptr[k + j + st] = k + l*ny2;
-          mat->vals[k + j + st + row] = kernel[k - h1 + g11];
-        }
-      }
-      
-      // 3 and 4
-      for (l = nx2+g1; l <= nx2-1; l++){
-        st = (l+param->kx-nx2)*param->ky;
-        g11 = (l-nx2-g1)*param->ky;
-        for (k = h1; k <= ny2-1; k++){
-          ptr[k + j + st] = k + l*ny2;
-          mat->vals[k + j + st + row] = kernel[k - h1 + g11];
-        }
-        for (k = 0; k <= h2-ny2; k++){
-          ptr[k + st] = k + l*ny2;
-          mat->vals[k + st + row] = kernel[k + h11 + g11];
-        }
-      }
-
-      //Column pointer vector
-      for (j = 0; j < numel; j++){
-        mat->colind[j + row] = ptr[j];
-      }
-
-    } 
-    else if ((g1 >= 0)&&(g2 < nx2)&&(h1 < 0)){
-      //Case 4
-      h11 = ny2+h1;
-      j = param->ky - ny2;
- 
-      for (l = g1; l <= g2; l++){
-        st = (l - g1)*param->ky;
-        //2
-        for (k = 0; k <= h2; k++){
-          ptr[k + st] = k + l*ny2;
-          mat->vals[k + st + row] = kernel[k - h1 + st];
-          
-        }
-        //1
-        for (k = h11; k <= ny2-1; k++){
-          ptr[k + j + st] = k + l*ny2;
-          mat->vals[k + j + st + row] = kernel[k - h11 + st];
-        }
-      }
-
-      //Column pointer vector
-      for (j = 0; j < numel; j++){
-        mat->colind[j + row] = ptr[j];
-      }
-
-    }
-    else if ((g1 >= 0)&&(g2 < nx2)&&(h1 >= 0)&&(h2 < ny2)){
-      //Case 5
-
-      j = 0;
-/*      
-      for (l = g1; l <= g2; l++){
-        st = l*ny2;
-        for (k = h1; k <= h2; k++){
-          ptr[j] = k + st;
-          j++;
-        }
-      }
-*/
-      for (l = h1; l <= h2; l++){
-        st = l*nx2;
-        for (k = g1; k <= g2; k++){
-          ptr[j] = k + st;
-          j++;
-        }
-      }
-
-      for (j = 0; j < numel; j++){
-        mat->vals[j + row] = kernel[j];
-        mat->colind[j + row] = ptr[j];
-      }
-
-    }
-    else if ((g1 >= 0)&&(g2 < nx2)&&(h2 >= ny2)){
-      //Case 6
-
-      h11 = ny2-h1;
-      j = param->ky - ny2;
-      
-      for (l = g1; l <= g2; l++){
-        st = (l - g1)*param->ky;
-        //2
-        for (k = 0; k <= h2-ny2; k++){
-          ptr[k + st] = k + l*ny2;
-          mat->vals[k + st + row] = kernel[k + h11 + st];
-        }
-        //1
-        for (k = h1; k <= ny2-1; k++){
-          ptr[k + j + st] = k + l*ny2;
-          mat->vals[k + j + st + row] = kernel[k - h1 + st];
-        }
-      }
-
-      //Column pointer vector
-      for (j = 0; j < numel; j++){
-        mat->colind[j + row] = ptr[j];
-      }
-
-    }  
-    else if ((g2 >= nx2)&&(h1 < 0)){
-      //Case 7
-
-      h11 = ny2+h1;
-      j = param->ky - ny2;
-      // 1 and 2
-      for (l = 0; l <= param->kx-nx2+g1-1; l++){
-        st = l*param->ky;
-        g11 = (l+nx2-g1)*param->ky;
-        for (k = 0; k <= h2; k++){
-          ptr[k + st] = k + l*ny2;
-          mat->vals[k + st + row] = kernel[k - h1 + g11];
-        }
-        for (k = h11; k <= ny2-1; k++){
-          ptr[k + j + st] = k + l*ny2;
-          mat->vals[k + j + st + row] = kernel[k - h11 + g11];
-        }
-      }
-      
-      // 3 and 4
-      for (l = g1; l <= nx2-1; l++){
-        st = (l + param->kx - nx2)*param->ky;
-        g11 = (l-g1)*param->ky;
-        for (k = h11; k <= ny2-1; k++){
-          ptr[k + j + st] = k + l*ny2;
-          mat->vals[k + j + st + row] = kernel[k - h11 + g11];
-        }
-        for (k = 0; k <= h2; k++){
-          ptr[k + st] = k + l*ny2;
-          mat->vals[k + st + row] = kernel[k - h1 + g11];
-        }
-      }
-
-      //Column pointer vector
-      for (j = 0; j < numel; j++){
-        mat->colind[j + row] = ptr[j];
-      }
-
-    }  
-    else if ((g2 >= nx2)&&(h1 >= 0)&&(h2 < ny2)){
-      //Case 8
-
-      //2
-      for (l = 0; l <= param->kx-nx2+g1-1; l++){
-        st = l*param->ky;
-        g11 = (l+nx2-g1)*param->ky;
-        for (k = h1; k <= h2; k++){
-          ptr[k - h1 + st] = k + l*ny2;
-          mat->vals[k - h1 + st + row] = kernel[k - h1 + g11];
-        }
-      }
-
-      //1
-      for (l = g1; l <= nx2-1; l++){
-        st = (l + param->kx - nx2)*param->ky;
-        g11 = (l-g1)*param->ky;
-        for (k = h1; k <= h2; k++){
-          ptr[k - h1 + st] = k + l*ny2;
-          mat->vals[k - h1 + st + row] = kernel[k - h1 + g11];
-        }
-      }
-
-      //Column pointer vector
-      for (j = 0; j < numel; j++){
-        mat->colind[j + row] = ptr[j];
-      }
-
-    }  
-    else if ((g2 >= nx2)&&(h2 >= ny2)){
-      //Case 9
-
-      h11 = ny2-h1;
-      j = param->ky - ny2;
-      // 1 and 2
-      for (l = 0; l <= param->kx-nx2+g1-1; l++){
-        st = l*param->ky;
-        g11 = (l+nx2-g1)*param->ky;
-        for (k = 0; k <= h2-ny2; k++){
-          ptr[k + st] = k + l*ny2;
-          mat->vals[k + st + row] = kernel[k + h11 + g11];
-        }
-        for (k = h1; k <= ny2-1; k++){
-          ptr[k + j + st] = k + l*ny2;
-          mat->vals[k + j + st + row] = kernel[k - h1 + g11];
-        }
-      }
-      
-      // 3 and 4
-      for (l = g1; l <= nx2-1; l++){
-        st = (l + param->kx - nx2)*param->ky;
-        g11 = (l-g1)*param->ky;
-        for (k = h1; k <= ny2-1; k++){
-          ptr[k + j + st] = k + l*ny2;
-          mat->vals[k + j + st + row] = kernel[k - h1 + g11];
-        }
-        for (k = 0; k <= h2-ny2; k++){
-          ptr[k + st] = k + l*ny2;
-          mat->vals[k + st + row] = kernel[k + h11 + g11];
-        }
-      }
-
-      //Column pointer vector
-      for (j = 0; j < numel; j++){
-        mat->colind[j + row] = ptr[j];
-      }
-
-    }
-        
-  }
-
-  //Row pointer vector
-  for (j = 0; j < mat->nrows + 1; j++){
-    mat->rowptr[j] = j*numel;
-  }
-
-  //Deconvolution kernel in image domain
-   
-  u2[0] = -(double)param->nx1/2;
-  for (i=1; i < param->nx1; i++){
-    u2[i] = u2[i-1] + 1.0;
-  }
- 
-  v2[0] = -(double)param->ny1/2;
-  for (i=1; i < param->ny1; i++){
-    v2[i] = v2[i-1] + 1.0;
-  }
- 
-  for (k=0; k < param->nx1; k++){
-    temp1 = u3[k]*sigmax;
-    temp1 = temp1*temp1;
-    st = k*param->ny1;
-    for (j=0; j < param->ny1; j++){
-      temp2 = v3[j]*sigmay;
-      temp2 = temp2*temp2;
-      temp2 = -(temp1 + temp2)/2.0;
-      deconv[j + st] = 1.0/exp(temp2);
-    }
-  }
-
-  //Free temporal memory
-  free(u2);
-  free(v2);
-  free(u3);
-  free(v3);
-  free(kernel);
-  free(ptr);
 
 }
 
