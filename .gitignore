@@ -1,0 +1,7 @@
+*.uv
+*.fits
+*.o
+data/*
+bin/*
+doc/*
+lib/*
