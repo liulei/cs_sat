@@ -21,6 +21,8 @@ typedef struct {
   int ky; 
   /*! Number of columns in the interpolation kernel. */
   int kx; 
+
+  double umax, vmax;
   
 } purify_measurement_cparam;
 

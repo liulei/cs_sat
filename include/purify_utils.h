@@ -2,6 +2,8 @@
 #ifndef PURIFY_UTILS
 #define PURIFY_UTILS
 
+void purify_utils_fftshift_2d_c(complex double *x, int nx, int ny);
+
 void purify_utils_fftshift_1d(double *out, double *in, int n);
 
 void purify_utils_ifftshift_1d(double *out, double *in, int n);

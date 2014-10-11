@@ -38,6 +38,8 @@ typedef enum
     PURIFY_VISIBILITY_FILETYPE_PROFILE_VIS,
     /*! PROFILE's visibility file format that also includes w coordinates. */
     PURIFY_VISIBILITY_FILETYPE_PROFILE_WIS,
+    // SHAO type
+    PURIFY_VISIBILITY_FILETYPE_UV,
   } purify_visibility_filetype;
 
 

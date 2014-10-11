@@ -44,8 +44,6 @@
 
 int main(int argc, char *argv[]) {
 
-  
-
   int i, j, Nx, Ny, Nr, Nb;
   int seedn=54;
   double sigma;
@@ -142,18 +140,18 @@ int main(int argc, char *argv[]) {
   param_m1.nmeas = vis_test.nmeas;
   param_m1.ny1 = dimy;
   param_m1.nx1 = dimx;
-  param_m1.ofy = 1;
-  param_m1.ofx = 1;
-  param_m1.ky = 2;
-  param_m1.kx = 2;
+  param_m1.ofy = 2;
+  param_m1.ofx = 2;
+  param_m1.ky = 1;
+  param_m1.kx = 1;
 
   param_m2.nmeas = vis_test.nmeas;
   param_m2.ny1 = dimy;
   param_m2.nx1 = dimx;
-  param_m2.ofy = 1;
-  param_m2.ofx = 1;
-  param_m2.ky = 2;
-  param_m2.kx = 2;
+  param_m2.ofy = 2;
+  param_m2.ofx = 2;
+  param_m2.ky = 1;
+  param_m2.kx = 1;
 
   Nb = 9;
   Nx=param_m2.ny1*param_m2.nx1;
@@ -194,12 +192,16 @@ int main(int argc, char *argv[]) {
     xinc[i] = 0.0 + 0.0*I;
   }
 
-  for (i=0; i < img.nx; i++){
-    for (j=0; j < img.ny; j++){
+  for (j=0; j < img.ny; j++){
+    for (i=0; i < img.nx; i++){
       xinc[i+j*param_m1.nx1] = img.pix[i+j*img.nx] + 0.0*I;
     }
   }
-  
+
+//  purify_utils_fftshift_2d_c(xinc, dimx, dimy);
+
+  param_m1.umax = 2.0 * M_PI;
+  param_m1.vmax = 2.0 * M_PI;
   //Initialize griding matrix
   assert((start = clock())!=-1);
   purify_measurement_init_cft(&gmat, deconv, vis_test.u, vis_test.v, &param_m1);
@@ -258,6 +260,7 @@ int main(int argc, char *argv[]) {
   sigma = a*pow(10.0,-(snr/20.0))/sqrt(Ny);
 
   FILE *fout = fopen("ein.uv", "w");
+  FILE *fvis = fopen("ein.vis", "w");
     
   for (i=0; i < Ny; i++) {
 //      noise[i] = (sopt_ran_gasdev2(seedn) + sopt_ran_gasdev2(seedn)*I)*(sigma/sqrt(2));
@@ -267,9 +270,14 @@ int main(int argc, char *argv[]) {
     fprintf(fout, "%14.5e%14.5e%14.5e%14.5e%14.5e%14.5e\n", 
             vis_test.u[i], vis_test.v[i], vis_test.w[i],
             creal(y[i]), cimag(y[i]), 1.0);
+
+    fprintf(fvis, "%6d  %14.5e%14.5e%14.5e%14.5e%14.5e%14.5e%14.5e\n", 
+            i, vis_test.u[i], vis_test.v[i], vis_test.w[i],
+            creal(y[i]), cimag(y[i]), 1.0, 0.0);
   }
 
   fclose(fout);
+  fclose(fvis);
 
   //Rescaling the measurements
 
@@ -296,6 +304,8 @@ int main(int argc, char *argv[]) {
   
   //Dirty image
   purify_measurement_cftadj((void*)xoutc, (void*)y, dataadj);
+
+//  purify_utils_fftshift_2d_c(xoutc, dimx, dimy);
 
   for (i=0; i < Nx; i++) {
     xout[i] = creal(xoutc[i]);
@@ -479,7 +489,7 @@ int main(int argc, char *argv[]) {
     img_copy.pix[i] = creal(xoutc[i]);
   }
   
-  purify_image_writefile(&img_copy, "./data/test/einbpsa.fits", filetype_img);
+  purify_image_writefile(&img_copy, "einbpsa.fits", filetype_img);
 
   //Residual image
 
@@ -492,16 +502,16 @@ int main(int argc, char *argv[]) {
     img_copy.pix[i] = creal(xinc[i]);
   }
   
-  purify_image_writefile(&img_copy, "data/test/einbpsares.fits", filetype_img);
+  purify_image_writefile(&img_copy, "einbpsares.fits", filetype_img);
   
   //Error image
   for (i=0; i < Nx; i++){
     img_copy.pix[i] = error[i];
   }
   
-  purify_image_writefile(&img_copy, "data/test/einbpsaerror.fits", filetype_img);
+  purify_image_writefile(&img_copy, "einbpsaerror.fits", filetype_img);
   
-
+    return 0;
 
   printf("**********************\n");
   printf("SARA reconstruction\n");

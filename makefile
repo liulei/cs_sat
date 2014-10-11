@@ -12,7 +12,7 @@ OPT	= -Wall -O3 -fopenmp \
 
 PROGDIR    = ..
 
-PURIFYDIR  = $(PROGDIR)/prepare_uv
+PURIFYDIR  = $(PROGDIR)/cs_sat
 PURIFYLIB  = $(PURIFYDIR)/lib
 PURIFYLIBNM= purify
 PURIFYSRC  = $(PURIFYDIR)/src
@@ -94,11 +94,9 @@ PURIFYHEADERS = purify_error.h                   \
                 purify_utils.h                   \
                 purify_sparsemat.h 
 
-PURIFYPROGS = $(PURIFYBIN)/purify_about         \
-              $(PURIFYBIN)/example_m31          \
-              $(PURIFYBIN)/example_30dor        \
-              $(PURIFYBIN)/example_ami          \
-              $(PURIFYBIN)/example_ein
+PURIFYPROGS = $(PURIFYBIN)/example_ein          \
+              $(PURIFYBIN)/reconstruct_ein      \
+              $(PURIFYBIN)/reconstruct_bk
 
 
 # ======== MAKE RULES ========
@@ -158,6 +156,8 @@ clean:	tidy cleantest
 	rm -f $(PURIFYOBJ)/*.o
 	rm -f $(PURIFYLIB)/lib$(PURIFYLIBNM).a
 	rm -rf $(PURIFYBIN)/*
+	rm -rf *.fits
+
 
 .PHONY: tidy
 tidy:

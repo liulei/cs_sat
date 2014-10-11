@@ -5,10 +5,38 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <complex.h>
 #include <math.h>
 #include "purify_error.h"
 #include "purify_types.h"
 
+void purify_utils_fftshift_2d_c(complex double *x, int nx, int ny){
+    
+    int i, j, id0, id1;
+    complex double tmp;
+
+// x direction:
+    for(j = 0; j < ny; ++j){
+        for(i = 0; i < nx / 2; ++i){
+            id0 = i + j * nx;
+            id1 = i + nx / 2 + j * nx;
+            tmp = x[id0];
+            x[id0] = x[id1];
+            x[id1] = tmp;
+        }
+    }
+
+// y direction:
+    for(j = 0; j < ny / 2; ++j){
+        for(i = 0; i < nx; ++i){
+            id0 = i + j * nx;
+            id1 = i + (j + ny / 2) * nx;
+            tmp = x[id0];
+            x[id0] = x[id1];
+            x[id1] = tmp;
+        }
+    }
+}
 
 /*!
  * fftshift of 1D array. Swaps the second and first parts of the array.

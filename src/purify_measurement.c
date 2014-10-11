@@ -248,7 +248,7 @@ void purify_measurement_init_cft(purify_sparsemat_row *mat,
     int i, j, k, l;
     int nx2, ny2;
     int row, numel;
-  
+    double uinc, vinc;
  
     //Sparse matrix initialization
     nx2 = param->ofx*param->nx1;
@@ -268,11 +268,18 @@ void purify_measurement_init_cft(purify_sparsemat_row *mat,
     mat->rowptr = (int*)malloc((mat->nrows + 1) * sizeof(int));
     PURIFY_ERROR_MEM_ALLOC_CHECK(mat->rowptr);
 
+    uinc = param->umax / (nx2 / 2);
+    vinc = param->vmax / (ny2 / 2);
+
+//    uinc = 4.0 * M_PI / nx2;
+//    vinc = 4.0 * M_PI / ny2;
+
 // Row pointer vector
     for (j = 0; j < mat->nrows + 1; j++){
         mat->rowptr[j] = j*numel;
     }
 
+    int idu, idv;
   //Main loop
     for (i=0; i < param->nmeas; i++){
     
@@ -291,6 +298,9 @@ void purify_measurement_init_cft(purify_sparsemat_row *mat,
         mat->colind[row] = idv * nx2 + idu;
     }
 
+    for(i = 0; i < param->nx1 * param->ny1; ++i){
+        deconv[i] = 1.0;
+    }
 }
 
 /*!
@@ -343,7 +353,7 @@ void purify_measurement_cftfwd(void *out, void *in, void **data){
   
   alpha = 0.0 + 0.0*I;
   //Zero padding and decovoluntion. 
-  //Left top corner of thee image corresponf to the original image.
+  //Original image in the center.
   for (i=0; i < nx2*ny2; i++){
     *(temp + i) = alpha;
   }
@@ -351,13 +361,20 @@ void purify_measurement_cftfwd(void *out, void *in, void **data){
   //Scaling
   scale = 1/sqrt((double)(nx2*ny2));
 
+  int npadx = nx2 / 4;
+  int npady = ny2 / 4;
+
   for (j=0; j < param->ny1; j++){
-    st1 = j*param->nx1;
-    st2 = j*nx2;
+    st1 = j * param->nx1;
+    st2 = (j + npady) * nx2;
     for (i=0; i < param->nx1; i++){
-      *(temp + st2 + i) = *(xin + st1 + i)**(deconv + st1 + i)*scale;
+//      *(temp + st2 + i) = *(xin + st1 + i)**(deconv + st1 + i)*scale;
+        *(temp + st2 + i + npadx) = *(xin + st1 + i) * scale;
+
     }
   }
+
+  purify_utils_fftshift_2d_c(temp, nx2, ny2);
 
   //FFT
   fftw_execute_dft(*plan, temp, temp);
@@ -422,15 +439,22 @@ void purify_measurement_cftadj(void *out, void *in, void **data){
   fftw_execute_dft(*plan, temp, temp);
   //Scaling
   scale = 1/sqrt((double)(nx2*ny2));
+
+  purify_utils_fftshift_2d_c(temp, nx2, ny2);
   
   //Cropping and decovoluntion. 
   //Top left corner of the image corresponf to the original image.
 
+  int npadx = nx2 / 4;
+  int npady = ny2 / 4;
+
   for (j=0; j < param->ny1; j++){
-    st1 = j*param->nx1;
-    st2 = j*nx2;
+    st1 = j * param->nx1;
+    st2 = (j + npady) * nx2;
     for (i=0; i < param->nx1; i++){
-      *(xout + st1 + i) = *(temp + st2 + i)**(deconv + st1 + i)*scale;
+//      *(xout + st1 + i) = *(temp + st2 + i)**(deconv + st1 + i)*scale;
+      *(xout + st1 + i) = *(temp + st2 + i + npadx) * scale;
+
     }
   }
 

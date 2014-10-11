@@ -1,7 +1,7 @@
 /*! 
- * \file example_m31.c
+ * \file example_ein.c
  * Image recontruction example from continuos visibilities.
- * Test image: M31 256x256.
+ * Test image: Einstein 256x256.
  * Coverage: random variable density with M=0.2N visibilities.
  *
  */
@@ -58,7 +58,7 @@ int main(int argc, char *argv[]) {
   complex double alpha;
   
 
-  purify_image img, img_copy;
+  purify_image img_copy;
   purify_visibility_filetype filetype_vis;
   purify_image_filetype filetype_img;
   complex double *xinc;
@@ -117,17 +117,17 @@ int main(int argc, char *argv[]) {
   dimy = 256;
 
   //Define parameters
-  filetype_vis = PURIFY_VISIBILITY_FILETYPE_PROFILE_VIS;
+  filetype_vis = PURIFY_VISIBILITY_FILETYPE_UV;
   filetype_img = PURIFY_IMAGE_FILETYPE_FITS;
 
   //Read coverage
   purify_visibility_readfile(&vis_test,
-             "./data/images/Coverages/cont_sim4.vis",
+             "ein.uv",
              filetype_vis); 
   printf("Number of visibilities: %i \n\n", vis_test.nmeas);  
 
    
-
+/*
   // Input image.
   img.fov_x = 1.0 / 180.0 * PURIFY_PI;
   img.fov_y = 1.0 / 180.0 * PURIFY_PI;
@@ -135,24 +135,25 @@ int main(int argc, char *argv[]) {
   img.ny = 4;
 
   //Read input image
-  purify_image_readfile(&img, "data/images/M31.fits", filetype_img);
+  purify_image_readfile(&img, "data/images/Einstein.fits", 1);
   printf("Image dimension: %i, %i \n\n", img.nx, img.ny); 
+*/
 
   param_m1.nmeas = vis_test.nmeas;
   param_m1.ny1 = dimy;
   param_m1.nx1 = dimx;
   param_m1.ofy = 2;
   param_m1.ofx = 2;
-  param_m1.ky = 24;
-  param_m1.kx = 24;
+  param_m1.ky = 1;
+  param_m1.kx = 1;
 
   param_m2.nmeas = vis_test.nmeas;
   param_m2.ny1 = dimy;
   param_m2.nx1 = dimx;
   param_m2.ofy = 2;
   param_m2.ofx = 2;
-  param_m2.ky = 24;
-  param_m2.kx = 24;
+  param_m2.ky = 1;
+  param_m2.kx = 1;
 
   Nb = 9;
   Nx=param_m2.ny1*param_m2.nx1;
@@ -189,25 +190,15 @@ int main(int argc, char *argv[]) {
   dummyc = malloc(Nr * sizeof(complex double));
   PURIFY_ERROR_MEM_ALLOC_CHECK(dummyc);
 
-  for (i=0; i < Nx; i++){
-    xinc[i] = 0.0 + 0.0*I;
-  }
-
- 
-
-  for (i=0; i < img.ny; i++){
-    for (j=0; j < img.nx; j++){
-      xinc[i+j*param_m1.ny1] = img.pix[i+j*img.ny] + 0.0*I;
-    }
-  }
-  
+  param_m1.umax = 2.0 * M_PI;
+  param_m1.vmax = 2.0 * M_PI;
   //Initialize griding matrix
   assert((start = clock())!=-1);
   purify_measurement_init_cft(&gmat, deconv, vis_test.u, vis_test.v, &param_m1);
   stop = clock();
   t = (double) (stop-start)/CLOCKS_PER_SEC;
   printf("Time initalization: %f \n\n", t);
-  
+
   //Memory allocation for the fft
   i = Nx*param_m1.ofy*param_m1.ofx;
   fft_temp1 = (complex double*)malloc((i) * sizeof(complex double));
@@ -240,13 +231,16 @@ int main(int argc, char *argv[]) {
 
   printf("FFT plan done \n\n");
   
-  
+ /* 
   assert((start = clock())!=-1);
   purify_measurement_cftfwd((void*)y0, (void*)xinc, datafwd);
   stop = clock();
   t = (double) (stop-start)/CLOCKS_PER_SEC;
   printf("Time forward operator: %f \n\n", t);
-
+*/
+  for(i = 0; i < Ny; ++i){
+    y0[i] = vis_test.y[i];     
+  }
   
   //Noise realization
   //Input snr
@@ -254,11 +248,19 @@ int main(int argc, char *argv[]) {
   a = cblas_dznrm2(Ny, (void*)y0, 1);
   sigma = a*pow(10.0,-(snr/20.0))/sqrt(Ny);
 
+  FILE *fout = fopen("ein.uv", "w");
     
   for (i=0; i < Ny; i++) {
-      noise[i] = (sopt_ran_gasdev2(seedn) + sopt_ran_gasdev2(seedn)*I)*(sigma/sqrt(2));
+//      noise[i] = (sopt_ran_gasdev2(seedn) + sopt_ran_gasdev2(seedn)*I)*(sigma/sqrt(2));
+      noise[i] = 0;
       y[i] = y0[i] + noise[i];
+
+    fprintf(fout, "%14.5e%14.5e%14.5e%14.5e%14.5e%14.5e\n", 
+            vis_test.u[i], vis_test.v[i], vis_test.w[i],
+            creal(y[i]), cimag(y[i]), 1.0);
   }
+
+  fclose(fout);
 
   //Rescaling the measurements
 
@@ -292,8 +294,6 @@ int main(int argc, char *argv[]) {
 
   aux1 = purify_utils_maxarray(xout, Nx);
 
-  
-
    img_copy.pix = (double*)malloc((Nx) * sizeof(double));
   PURIFY_ERROR_MEM_ALLOC_CHECK(img_copy.pix);
 
@@ -301,9 +301,9 @@ int main(int argc, char *argv[]) {
     img_copy.pix[i] = creal(xoutc[i]);
   }
   
-  purify_image_writefile(&img_copy, "./data/test/m31dirty.fits", filetype_img);
+  purify_image_writefile(&img_copy, "eindirty.fits", filetype_img);
   
-
+//  return 0;
   
   //SARA structure initialization
 
@@ -468,7 +468,7 @@ int main(int argc, char *argv[]) {
     img_copy.pix[i] = creal(xoutc[i]);
   }
   
-  purify_image_writefile(&img_copy, "./data/test/m31bpsa.fits", filetype_img);
+  purify_image_writefile(&img_copy, "einbpsa.fits", filetype_img);
 
   //Residual image
 
@@ -481,16 +481,16 @@ int main(int argc, char *argv[]) {
     img_copy.pix[i] = creal(xinc[i]);
   }
   
-  purify_image_writefile(&img_copy, "data/test/m31bpsares.fits", filetype_img);
+  purify_image_writefile(&img_copy, "einbpsares.fits", filetype_img);
   
   //Error image
   for (i=0; i < Nx; i++){
     img_copy.pix[i] = error[i];
   }
   
-  purify_image_writefile(&img_copy, "data/test/m31bpsaerror.fits", filetype_img);
+  purify_image_writefile(&img_copy, "einbpsaerror.fits", filetype_img);
   
-
+    return 0;
 
   printf("**********************\n");
   printf("SARA reconstruction\n");
@@ -547,7 +547,7 @@ int main(int argc, char *argv[]) {
     img_copy.pix[i] = creal(xoutc[i]);
   }
   
-  purify_image_writefile(&img_copy, "data/test/m31sara.fits", filetype_img);
+  purify_image_writefile(&img_copy, "data/test/einsara.fits", filetype_img);
 
   
 
@@ -562,14 +562,14 @@ int main(int argc, char *argv[]) {
     img_copy.pix[i] = creal(xinc[i]);
   }
   
-  purify_image_writefile(&img_copy, "data/test/m31sarares.fits", filetype_img);
+  purify_image_writefile(&img_copy, "data/test/einsarares.fits", filetype_img);
 
   //Error image
   for (i=0; i < Nx; i++){
     img_copy.pix[i] = error[i];
   }
   
-  purify_image_writefile(&img_copy, "data/test/m31saraerror.fits", filetype_img);
+  purify_image_writefile(&img_copy, "data/test/einsaraerror.fits", filetype_img);
 
   
     printf("**********************\n");
@@ -629,7 +629,7 @@ int main(int argc, char *argv[]) {
     img_copy.pix[i] = creal(xoutc[i]);
   }
   
-  purify_image_writefile(&img_copy, "data/test/m31tv.fits", filetype_img);
+  purify_image_writefile(&img_copy, "data/test/eintv.fits", filetype_img);
 
    //Residual image
 
@@ -642,14 +642,14 @@ int main(int argc, char *argv[]) {
     img_copy.pix[i] = creal(xinc[i]);
   }
   
-  purify_image_writefile(&img_copy, "data/test/m31tvres.fits", filetype_img);
+  purify_image_writefile(&img_copy, "data/test/eintvres.fits", filetype_img);
 
   //Error image
   for (i=0; i < Nx; i++){
     img_copy.pix[i] = error[i];
   }
   
-  purify_image_writefile(&img_copy, "data/test/m31tverror.fits", filetype_img);
+  purify_image_writefile(&img_copy, "data/test/eintverror.fits", filetype_img);
 
   printf("**********************\n");
   printf("RWTV reconstruction\n");
@@ -692,7 +692,7 @@ int main(int argc, char *argv[]) {
     img_copy.pix[i] = creal(xoutc[i]);
   }
   
-  purify_image_writefile(&img_copy, "data/test/m31rwtv.fits", filetype_img);
+  purify_image_writefile(&img_copy, "data/test/einrwtv.fits", filetype_img);
 
    //Residual image
 
@@ -705,14 +705,14 @@ int main(int argc, char *argv[]) {
     img_copy.pix[i] = creal(xinc[i]);
   }
   
-  purify_image_writefile(&img_copy, "data/test/m31rwtvres.fits", filetype_img);
+  purify_image_writefile(&img_copy, "data/test/einrwtvres.fits", filetype_img);
 
   //Error image
   for (i=0; i < Nx; i++){
     img_copy.pix[i] = error[i];
   }
   
-  purify_image_writefile(&img_copy, "data/test/m31rwtverror.fits", filetype_img);
+  purify_image_writefile(&img_copy, "data/test/einrwtverror.fits", filetype_img);
 
   printf("**********************\n");
   printf("Db8 reconstruction\n");
@@ -756,7 +756,7 @@ int main(int argc, char *argv[]) {
     img_copy.pix[i] = creal(xoutc[i]);
   }
   
-  purify_image_writefile(&img_copy, "data/test/m31db8.fits", filetype_img);
+  purify_image_writefile(&img_copy, "data/test/eindb8.fits", filetype_img);
 
    //Residual image
 
@@ -769,14 +769,14 @@ int main(int argc, char *argv[]) {
     img_copy.pix[i] = creal(xinc[i]);
   }
   
-  purify_image_writefile(&img_copy, "data/test/m31db8res.fits", filetype_img);
+  purify_image_writefile(&img_copy, "data/test/eindb8res.fits", filetype_img);
 
   //Error image
   for (i=0; i < Nx; i++){
     img_copy.pix[i] = error[i];
   }
   
-  purify_image_writefile(&img_copy, "data/test/m31db8error.fits", filetype_img);
+  purify_image_writefile(&img_copy, "data/test/eindb8error.fits", filetype_img);
 
   printf("**********************\n");
   printf("RWBPDb8 reconstruction\n");
@@ -825,7 +825,7 @@ int main(int argc, char *argv[]) {
     img_copy.pix[i] = creal(xoutc[i]);
   }
   
-  purify_image_writefile(&img_copy, "data/test/m31rwdb8.fits", filetype_img);
+  purify_image_writefile(&img_copy, "data/test/einrwdb8.fits", filetype_img);
 
    //Residual image
 
@@ -838,14 +838,14 @@ int main(int argc, char *argv[]) {
     img_copy.pix[i] = creal(xinc[i]);
   }
   
-  purify_image_writefile(&img_copy, "data/test/m31rwdb8res.fits", filetype_img);
+  purify_image_writefile(&img_copy, "data/test/einrwdb8res.fits", filetype_img);
 
   //Error image
   for (i=0; i < Nx; i++){
     img_copy.pix[i] = error[i];
   }
   
-  purify_image_writefile(&img_copy, "data/test/m31rwdb8error.fits", filetype_img);
+  purify_image_writefile(&img_copy, "data/test/einrwdb8error.fits", filetype_img);
 
 
 
@@ -891,7 +891,7 @@ int main(int argc, char *argv[]) {
     img_copy.pix[i] = creal(xoutc[i]);
   }
   
-  purify_image_writefile(&img_copy, "data/test/m31bp.fits", filetype_img);
+  purify_image_writefile(&img_copy, "data/test/einbp.fits", filetype_img);
 
    //Residual image
 
@@ -904,14 +904,14 @@ int main(int argc, char *argv[]) {
     img_copy.pix[i] = creal(xinc[i]);
   }
   
-  purify_image_writefile(&img_copy, "data/test/m31bpres.fits", filetype_img);
+  purify_image_writefile(&img_copy, "data/test/einbpres.fits", filetype_img);
 
   //Error image
   for (i=0; i < Nx; i++){
     img_copy.pix[i] = error[i];
   }
   
-  purify_image_writefile(&img_copy, "data/test/m31bperror.fits", filetype_img);
+  purify_image_writefile(&img_copy, "data/test/einbperror.fits", filetype_img);
 
   printf("**********************\n");
   printf("RWBP reconstruction\n");
@@ -960,7 +960,7 @@ int main(int argc, char *argv[]) {
     img_copy.pix[i] = creal(xoutc[i]);
   }
   
-  purify_image_writefile(&img_copy, "data/test/m31rwbp.fits", filetype_img);
+  purify_image_writefile(&img_copy, "data/test/einrwbp.fits", filetype_img);
 
    //Residual image
 
@@ -973,20 +973,20 @@ int main(int argc, char *argv[]) {
     img_copy.pix[i] = creal(xinc[i]);
   }
   
-  purify_image_writefile(&img_copy, "data/test/m31rwbpres.fits", filetype_img);
+  purify_image_writefile(&img_copy, "data/test/einrwbpres.fits", filetype_img);
 
   //Error image
   for (i=0; i < Nx; i++){
     img_copy.pix[i] = error[i];
   }
   
-  purify_image_writefile(&img_copy, "data/test/m31rwbperror.fits", filetype_img);
+  purify_image_writefile(&img_copy, "data/test/einrwbperror.fits", filetype_img);
 
 
   
   
   //Free all memory
-  purify_image_free(&img);
+//  purify_image_free(&img);
   purify_image_free(&img_copy);
   free(deconv);
   purify_visibility_free(&vis_test);
