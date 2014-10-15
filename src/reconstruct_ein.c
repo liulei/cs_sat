@@ -396,9 +396,9 @@ int main(int argc, char *argv[]) {
     w[i] = 1.0;
   }
   //Copy true image in xout
-  for (i=0; i < Nx; i++) {
-    xout[i] = creal(xinc[i]);
-  }
+//  for (i=0; i < Nx; i++) {
+//    xout[i] = creal(xinc[i]);
+//  }
 
 
 
@@ -490,7 +490,7 @@ int main(int argc, char *argv[]) {
   
   purify_image_writefile(&img_copy, "einbpsaerror.fits", filetype_img);
   
-    return 0;
+//    return 0;
 
   printf("**********************\n");
   printf("SARA reconstruction\n");

@@ -96,7 +96,8 @@ PURIFYHEADERS = purify_error.h                   \
 
 PURIFYPROGS = $(PURIFYBIN)/example_ein          \
               $(PURIFYBIN)/reconstruct_ein      \
-              $(PURIFYBIN)/reconstruct_bk
+              $(PURIFYBIN)/reconstruct_bk       \
+              $(PURIFYBIN)/reconstruct_16B
 
 
 # ======== MAKE RULES ========
