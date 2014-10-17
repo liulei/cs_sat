@@ -324,6 +324,7 @@ int main(int argc, char *argv[]) {
   purify_image_writefile(&img_copy, buf, filetype_img);
   printf("Max value in dirty image: %f\n", aux1);
   
+/*
   purify_measurement_cftfwd((void *)ytmp, (void *)xoutc, datafwd);
   purify_measurement_cftadj((void *)xoutc, (void *)ytmp, dataadj);
   for (i=0; i < Nx; i++){
@@ -331,8 +332,8 @@ int main(int argc, char *argv[]) {
   }
   sprintf(buf, "%sfwd.fits", src);
   purify_image_writefile(&img_copy, buf, filetype_img);
- 
-  return 0;
+*/
+//  return 0;
   
   //SARA structure initialization
 

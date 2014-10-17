@@ -370,7 +370,7 @@ void purify_measurement_cftfwd(void *out, void *in, void **data){
     for (i=0; i < param->nx1; i++){
 //      *(temp + st2 + i) = *(xin + st1 + i)**(deconv + st1 + i)*scale;
         *(temp + st2 + i + npadx) = *(xin + st1 + i) * scale;
-
+        *(temp + st2 + i + npadx) *= *(deconv + st1 + i);
     }
   }
 
@@ -454,7 +454,7 @@ void purify_measurement_cftadj(void *out, void *in, void **data){
     for (i=0; i < param->nx1; i++){
 //      *(xout + st1 + i) = *(temp + st2 + i)**(deconv + st1 + i)*scale;
       *(xout + st1 + i) = *(temp + st2 + i + npadx) * scale;
-
+      *(xout + st1 + i) *= *(deconv + st1 + i);
     }
   }
 
