@@ -290,11 +290,11 @@ int main(int argc, char *argv[]) {
   aux4 = (double)Ny/(double)Nx;
 
   for (i=0; i < Ny; i++) {
-//    y[i] = y[i]/sqrt(aux4);
+    y[i] = y[i]/sqrt(aux4);
   }
 
   for (i=0; i < Nx; i++) {
-//    deconv[i] = deconv[i]/sqrt(aux4);
+    deconv[i] = deconv[i]/sqrt(aux4);
 //      deconv[i] = 1.0;
   }
   
