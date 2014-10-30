@@ -47,6 +47,7 @@ int main(int argc, char *argv[]) {
   
     char *src = "16B";
 //    char *src = "ein";
+//    char *src = "bk";
     char buf[128];
 
   int i, j, Nx, Ny, Nr, Nb;
@@ -205,11 +206,12 @@ int main(int argc, char *argv[]) {
     res_rad = res_mas * 1E-3 / 3600. / 180. * M_PI;
 
     param_m1.umax = 1.0 / res_rad / 2.;
-//    param_m1.umax = 2.0 * M_PI;
+//    param_m1.umax = 1.0 * M_PI;
     param_m1.vmax = param_m1.umax;
 
 //  param_m1.umax = 2.0 * M_PI;
 //  param_m1.vmax = 2.0 * M_PI;
+
   //Initialize griding matrix
   assert((start = clock())!=-1);
   purify_measurement_init_cft(&gmat, deconv, vis_test.u, vis_test.v, &param_m1);

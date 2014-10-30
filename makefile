@@ -94,7 +94,7 @@ PURIFYHEADERS = purify_error.h                   \
                 purify_utils.h                   \
                 purify_sparsemat.h 
 
-PURIFYPROGS = $(PURIFYBIN)/example_ein          \
+PURIFYPROGS = $(PURIFYBIN)/prepare_ein          \
               $(PURIFYBIN)/reconstruct_ein      \
               $(PURIFYBIN)/reconstruct_bk       \
               $(PURIFYBIN)/reconstruct_16B

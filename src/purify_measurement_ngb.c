@@ -271,9 +271,6 @@ void purify_measurement_init_cft(purify_sparsemat_row *mat,
     uinc = param->umax / (nx2 / 2);
     vinc = param->vmax / (ny2 / 2);
 
-//    sigmax = 1.0 / (double)param->nx1;
-//    sigmay = 1.0 / (double)param->ny1;
-
 //    uinc = 4.0 * M_PI / nx2;
 //    vinc = 4.0 * M_PI / ny2;
 
@@ -285,7 +282,7 @@ void purify_measurement_init_cft(purify_sparsemat_row *mat,
     int idu, idv;
   //Main loop
     for (i=0; i < param->nmeas; i++){
-
+    
     //Row pointer
         row = i*numel;
 
