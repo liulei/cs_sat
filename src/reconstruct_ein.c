@@ -8,6 +8,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <complex.h>  // Must be before fftw3.h
 #include <fftw3.h>
 #include <math.h>
@@ -46,8 +47,15 @@ int main(int argc, char *argv[]) {
 
   
 //    char *src = "16B";
-    char *src = "ein";
+    char src[128];
 //    char *src = "bk";
+    strcpy(src, "ein");
+    if(argc > 1){
+        strcpy(src, argv[1]);
+    }else{
+        printf("Use default uv source: %s\n", src);
+    }
+    
     char buf[128];
 
   int i, j, Nx, Ny, Nr, Nb;

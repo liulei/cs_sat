@@ -493,7 +493,7 @@ int main(int argc, char *argv[]) {
   purify_image_writefile(&img_copy, "einbpsa.fits", filetype_img);
 
 
-//    return 0;
+    return 0;
 
   //Residual image
 

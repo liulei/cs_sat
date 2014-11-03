@@ -282,7 +282,7 @@ void purify_measurement_init_cft(purify_sparsemat_row *mat,
     int idu, idv;
   //Main loop
     for (i=0; i < param->nmeas; i++){
-    
+
     //Row pointer
         row = i*numel;
 

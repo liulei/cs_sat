@@ -45,9 +45,9 @@
 int main(int argc, char *argv[]) {
 
   
-    char *src = "16B";
+    char *src = "16Bgrid";
 //    char *src = "ein";
-//    char *src = "bk";
+//    char *src = "bkgrid";
     char buf[128];
 
   int i, j, Nx, Ny, Nr, Nb;
@@ -121,6 +121,10 @@ int main(int argc, char *argv[]) {
   //Dimensions should be power of 2
   dimx = 256;
   dimy = 256;
+//    dimx = 128;
+//    dimy = 128;
+//  dimx = 1024;
+//  dimy = 1024;
 
   //Define parameters
   filetype_vis = PURIFY_VISIBILITY_FILETYPE_UV;
@@ -497,7 +501,7 @@ int main(int argc, char *argv[]) {
     img_copy.pix[i] = error[i];
   }
 //  purify_image_writefile(&img_copy, "data/test/eindb8error.fits", filetype_img);
-  return 0;
+//  return 0;
 
 
 /////////////////////////////////////////////////////////////////////////
