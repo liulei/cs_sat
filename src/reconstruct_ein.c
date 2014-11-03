@@ -444,7 +444,7 @@ int main(int argc, char *argv[]) {
   //Structure for the L1 solver      
   param4.verbose = 2;
 //  param4.max_iter = 300;
-  param4.max_iter = 20;
+  param4.max_iter = 300;
   param4.gamma = gamma*aux2;
   param4.rel_obj = 0.001;
   param4.epsilon = sqrt(Ny + 2*sqrt(Ny))*sigma/sqrt(aux4);

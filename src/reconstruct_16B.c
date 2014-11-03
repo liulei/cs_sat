@@ -8,6 +8,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <complex.h>  // Must be before fftw3.h
 #include <fftw3.h>
 #include <math.h>
@@ -45,9 +46,15 @@
 int main(int argc, char *argv[]) {
 
   
-    char *src = "16Bgrid";
+//    char *src = "16B";
 //    char *src = "ein";
-//    char *src = "bkgrid";
+    char src[128];
+    if(argc > 1){
+        strcpy(src, argv[1]);
+    }else{
+        strcpy(src, "16B");
+        printf("Use default source: %s\n", src);
+    }
     char buf[128];
 
   int i, j, Nx, Ny, Nr, Nb;
@@ -119,8 +126,8 @@ int main(int argc, char *argv[]) {
   
   //Image dimension of the zero padded image
   //Dimensions should be power of 2
-  dimx = 256;
-  dimy = 256;
+    dimx = 256;
+    dimy = 256;
 //    dimx = 128;
 //    dimy = 128;
 //  dimx = 1024;
@@ -501,7 +508,7 @@ int main(int argc, char *argv[]) {
     img_copy.pix[i] = error[i];
   }
 //  purify_image_writefile(&img_copy, "data/test/eindb8error.fits", filetype_img);
-//  return 0;
+  return 0;
 
 
 /////////////////////////////////////////////////////////////////////////

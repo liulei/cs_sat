@@ -24,6 +24,7 @@
 #include "purify_measurement.h" 
 #include "purify_ran.h"  
 
+#define NGCF 301
 
 /*!
  * Compute forward Fouier transform of real signal.  A real-to-complex
@@ -245,21 +246,44 @@ void purify_measurement_init_cft(purify_sparsemat_row *mat,
                                  double *deconv, double *u, double *v, 
                                  purify_measurement_cparam *param) {
 
-    int i, j, k, l;
+    int D = 20;
+    int nmask = 9;
+    int i, j;
     int nx2, ny2;
     int row, numel;
     double uinc, vinc;
- 
+
+// initialize wavelet kernel
+    int dummy, q, len;
+    double qq, *phi;
+    char buf[128];
+    sprintf(buf, "D%d.phi", D);
+    FILE *fwav = fopen(buf, "rb");
+    fread(&dummy, sizeof(int), 1, fwav);
+    if(dummy != D){
+        printf("%s: wrong wavelet number (%d)!\n", __FUNCTION__, dummy);
+        exit(-1);
+    }
+    fread(&q, sizeof(int), 1, fwav);
+    len = (1 << q) * (D - 1);
+    qq = 1 << q;
+    phi = (double *)malloc(sizeof(double) * len);
+    fread(phi, sizeof(double), len, fwav);
+    fclose(fwav);
+
     //Sparse matrix initialization
     nx2 = param->ofx*param->nx1;
     ny2 = param->ofy*param->ny1;
 
     mat->nrows = param->nmeas;
     mat->ncols = nx2*ny2;
-    mat->nvals = param->kx*param->ky*param->nmeas;
+//    mat->nvals = param->kx*param->ky*param->nmeas;
+    mat->nvals = param->nmeas * (nmask + 1) * (nmask + 1);
     mat->real = 1;
     mat->cvals = NULL;
-    numel = param->kx*param->ky;
+//    numel = param->kx*param->ky;
+    numel = (nmask + 1) * (nmask + 1);
+    
  
     mat->vals = (double*)malloc(mat->nvals * sizeof(double));
     PURIFY_ERROR_MEM_ALLOC_CHECK(mat->vals);
@@ -271,6 +295,9 @@ void purify_measurement_init_cft(purify_sparsemat_row *mat,
     uinc = param->umax / (nx2 / 2);
     vinc = param->vmax / (ny2 / 2);
 
+//    sigmax = 1.0 / (double)param->nx1;
+//    sigmay = 1.0 / (double)param->ny1;
+
 //    uinc = 4.0 * M_PI / nx2;
 //    vinc = 4.0 * M_PI / ny2;
 
@@ -279,28 +306,46 @@ void purify_measurement_init_cft(purify_sparsemat_row *mat,
         mat->rowptr[j] = j*numel;
     }
 
-    int idu, idv;
+    int idu, idv, iv, iu, iv2, iu2, counter; 
+    double ufrc, vfrc;
+    double fv, fu;
   //Main loop
     for (i=0; i < param->nmeas; i++){
 
-    //Row pointer
-        row = i*numel;
+        // always the smaller pixel:
+        idu = floor(u[i] / uinc);
+        idv = floor(v[i] / vinc);
+        vfrc = v[i] / vinc;
+        ufrc = u[i] / uinc;
+        row = i * numel;
 
-        idu = floor(u[i] / uinc + 0.5);
-        if(idu < 0) idu += nx2;
-        if(idu >= nx2) idu -= nx2;
+        counter = 0;
+        for(iv = idv - nmask; iv <= idv; ++iv){
+            fv = phi[(int) (qq * fabs(iv - vfrc) + 0.5)];
+            for(iu = idu - nmask; iu <= idu; ++iu){
+                fu = phi[(int) (qq * fabs(iu - ufrc) + 0.5)];
+                
+                iu2 = iu; iv2 = iv;
+                if(iu2 < 0) iu2 += nx2;
+                if(iu2 >= nx2) iu2 -= nx2;
 
-        idv = floor(v[i] / vinc + 0.5);
-        if(idv < 0) idv += ny2;
-        if(idv >= ny2) idv -= ny2;
+                if(iv2 < 0) iv2 += ny2;
+                if(iv2 >= ny2) iv2 -= ny2;
 
-        mat->vals[row] = 1.0;
-        mat->colind[row] = idv * nx2 + idu;
-    }
+                mat->vals[row + counter] = fv * fu;
+//                mat->vals[row + counter] = 1.0;
+                mat->colind[row + counter] = iv2 * nx2 + iu2;
+
+                counter++;
+            } // for iu
+        } // for iv
+    } // for nmeas
 
     for(i = 0; i < param->nx1 * param->ny1; ++i){
         deconv[i] = 1.0;
     }
+
+    free(phi);
 }
 
 /*!
